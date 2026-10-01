@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>カナダラクイズ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: 視力検査の表のように、1文字を大きく見せる1画面完結のアプリ。下部にタブ2つ(クイズ / カナダラ表)。 */
+:root {
+  --bg: #eef0f3;
+  --card: #ffffff;
+  --ink: #14171c;
+  --mute: #5d6572;
+  --line: #d3d8df;
+  --accent: #1f4fa8;
+  --accent-ink: #ffffff;
+  --ok: #1b7a4b;
+  --ng: #b3261e;
+  --soft: #e3e8f2;
+  --font-kr: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-ui: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101318; --card: #181c23; --ink: #eceff4; --mute: #9aa3b0; --line: #2e3540;
+    --accent: #7fa6f0; --accent-ink: #0c1424; --ok: #5cc58e; --ng: #f08a82; --soft: #212838;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101318; --card: #181c23; --ink: #eceff4; --mute: #9aa3b0; --line: #2e3540;
+  --accent: #7fa6f0; --accent-ink: #0c1424; --ok: #5cc58e; --ng: #f08a82; --soft: #212838;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-ui); font-size: 16px; line-height: 1.5;
+  padding-inline: 16px; padding-block: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.app { max-width: 560px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+.main { flex: 1; padding-block: 20px 96px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.kr { font-family: var(--font-kr); }
+
+/* header */
+.title { font-size: 1.25rem; font-weight: 700; letter-spacing: .02em; }
+.sub { color: var(--mute); font-size: .9rem; }
+
+/* level buttons */
+.levels { display: grid; gap: 12px; }
+.level {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 16px;
+  text-align: left; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px;
+  padding: 16px 18px; min-height: 84px;
+}
+.level:active { background: var(--soft); }
+.level .glyph { font-family: var(--font-kr); font-weight: 900; font-size: 2.2rem; line-height: 1; grid-row: span 2; min-width: 3.2rem; text-align: center; }
+.level .name { font-weight: 700; font-size: 1.15rem; }
+.level .desc { color: var(--mute); font-size: .85rem; grid-column: 2; }
+.level .go { grid-column: 3; grid-row: 1 / span 2; color: var(--accent); font-weight: 700; }
+.note { color: var(--mute); font-size: .85rem; }
+.warn { background: var(--soft); border-radius: 10px; padding: 10px 12px; font-size: .85rem; }
+
+/* progress */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.pill { font-variant-numeric: tabular-nums; font-weight: 700; }
+.dots { display: flex; gap: 6px; flex: 1; justify-content: center; }
+.dots i { width: 100%; max-width: 22px; height: 6px; border-radius: 3px; background: var(--line); display: block; }
+.dots i.cur { background: var(--accent); }
+.dots i.ok { background: var(--ok); }
+.dots i.ng { background: var(--ng); }
+.quit { background: none; border: none; color: var(--mute); padding: 8px 0; font-size: .9rem; }
+
+/* chart-like card */
+.card {
+  background: var(--card); border: 1.5px solid var(--line); border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px 16px; min-height: 340px; width: 100%; text-align: center;
+}
+.big { font-family: var(--font-kr); font-weight: 900; font-size: clamp(8rem, 42vw, 12rem); line-height: 1; letter-spacing: 0; }
+button.big { background: none; border: none; padding: 0; }
+.hint { color: var(--mute); font-size: .95rem; }
+.answer { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.kana { font-size: 2.4rem; font-weight: 700; line-height: 1.2; }
+.rom { color: var(--mute); font-size: 1.05rem; font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+.replay { background: var(--soft); border: none; border-radius: 999px; padding: 8px 18px; font-weight: 500; }
+
+.judge { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.judge button { border: none; border-radius: 14px; min-height: 64px; font-weight: 700; font-size: 1.1rem; }
+.judge .yes { background: var(--ok); color: #fff; }
+.judge .no { background: var(--ng); color: #fff; }
+:root[data-theme="dark"] .judge button { color: #0c1420; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .judge button { color: #0c1420; } }
+
+/* result */
+.score { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 28px 16px; }
+.pct { font-size: 5rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.pct small { font-size: 2rem; }
+.frac { color: var(--mute); font-variant-numeric: tabular-nums; }
+.missed { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; display: flex; align-items: baseline; gap: 8px; }
+.chip b { font-family: var(--font-kr); font-size: 1.6rem; font-weight: 700; }
+.chip span { color: var(--mute); font-size: .9rem; }
+.row { display: grid; gap: 10px; }
+.btn { border: none; border-radius: 14px; min-height: 56px; font-weight: 700; background: var(--accent); color: var(--accent-ink); font-size: 1.05rem; }
+.btn.alt { background: var(--card); color: var(--ink); border: 1.5px solid var(--line); }
+
+/* chart tab */
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--soft); border-radius: 12px; padding: 4px; gap: 4px; }
+.seg button { border: none; background: none; border-radius: 9px; min-height: 40px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--card); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.switch { display: flex; align-items: center; gap: 10px; font-size: .9rem; color: var(--mute); }
+.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.tablewrap { overflow: auto; background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; max-height: 70vh; }
+table { border-collapse: separate; border-spacing: 0; font-family: var(--font-kr); }
+th, td { padding: 0; text-align: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+thead th { position: sticky; top: 0; background: var(--soft); z-index: 2; font-size: 1rem; font-weight: 700; padding: 8px 0; min-width: 48px; }
+tbody th { position: sticky; left: 0; background: var(--soft); z-index: 1; font-size: 1.05rem; font-weight: 700; min-width: 44px; padding: 0 6px; }
+thead th:first-child { left: 0; z-index: 3; }
+td button { width: 100%; min-width: 48px; background: none; border: none; padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 0; line-height: 1.15; }
+td button .g { font-size: 1.4rem; font-weight: 700; }
+td button .k { font-family: var(--font-ui); font-size: .62rem; color: var(--mute); min-height: .75rem; }
+.noKana td button .k { display: none; }
+td button:active, td button.on { background: var(--soft); }
+td.empty { color: var(--line); background: transparent; }
+.gap-title { font-size: .85rem; color: var(--mute); }
+
+/* tab bar */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 10;
+}
+.tabs div { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tabs button { border: none; background: none; min-height: 52px; border-radius: 12px; font-weight: 700; color: var(--mute); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+.tabs button .ic { font-family: var(--font-kr); font-size: 1.1rem; line-height: 1.2; }
+.tabs button .lb { font-size: .8rem; }
+.tabs button[aria-selected="true"] { color: var(--accent); background: var(--soft); }
+@media (prefers-reduced-motion: no-preference) { .card .answer { animation: pop .18s ease-out; } }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+
+</head>
+<body>
+<div class="app">
+  <div class="main" id="main"></div>
+</div>
+<nav class="tabs" aria-label="メニュー">
+  <div role="tablist">
+    <button role="tab" id="tab-quiz" aria-selected="true"><span class="ic kr">가</span><span class="lb">クイズ</span></button>
+    <button role="tab" id="tab-chart" aria-selected="false"><span class="ic kr">가나다</span><span class="lb">カナダラ表</span></button>
+  </div>
+</nav>
+
+<script>
+(function () {
+  /* ---------- データ ---------- */
+  var L_ORDER = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  var V_ORDER = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+
+  // r: ア・イ・ウ・エ・オ行, y: ヤ・ユ・ヨ, w: ワ・ウォ・ウェ・ウィ
+  var C = {
+    'ㄱ': { rom: 'g',  r: ['カ','キ','ク','ケ','コ'], y: ['キャ','キュ','キョ'], w: ['クァ','クォ','クェ','クィ'] },
+    'ㄴ': { rom: 'n',  r: ['ナ','ニ','ヌ','ネ','ノ'], y: ['ニャ','ニュ','ニョ'] },
+    'ㄷ': { rom: 'd',  r: ['タ','ティ','トゥ','テ','ト'], y: ['ティャ','ティュ','ティョ'] },
+    'ㄹ': { rom: 'r',  r: ['ラ','リ','ル','レ','ロ'], y: ['リャ','リュ','リョ'] },
+    'ㅁ': { rom: 'm',  r: ['マ','ミ','ム','メ','モ'], y: ['ミャ','ミュ','ミョ'] },
+    'ㅂ': { rom: 'b',  r: ['パ','ピ','プ','ペ','ポ'], y: ['ピャ','ピュ','ピョ'] },
+    'ㅅ': { rom: 's',  r: ['サ','シ','ス','セ','ソ'], y: ['シャ','シュ','ショ'] },
+    'ㅇ': { rom: '',   r: ['ア','イ','ウ','エ','オ'], y: ['ヤ','ユ','ヨ'], w: ['ワ','ウォ','ウェ','ウィ'], ye: 'イェ', ui: 'ウィ' },
+    'ㅈ': { rom: 'j',  r: ['チャ','チ','チュ','チェ','チョ'], y: ['チャ','チュ','チョ'] },
+    'ㅊ': { rom: 'ch', r: ['チャ','チ','チュ','チェ','チョ'], y: ['チャ','チュ','チョ'] },
+    'ㅋ': { rom: 'k',  r: ['カ','キ','ク','ケ','コ'], y: ['キャ','キュ','キョ'], w: ['クァ','クォ','クェ','クィ'] },
+    'ㅌ': { rom: 't',  r: ['タ','ティ','トゥ','テ','ト'], y: ['ティャ','ティュ','ティョ'] },
+    'ㅍ': { rom: 'p',  r: ['パ','ピ','プ','ペ','ポ'], y: ['ピャ','ピュ','ピョ'] },
+    'ㅎ': { rom: 'h',  r: ['ハ','ヒ','フ','ヘ','ホ'], y: ['ヒャ','ヒュ','ヒョ'], w: ['ファ','フォ','フェ','フィ'] }
+  };
+  var TENSE = { 'ㄲ': ['ㄱ','kk'], 'ㄸ': ['ㄷ','tt'], 'ㅃ': ['ㅂ','pp'], 'ㅆ': ['ㅅ','ss'], 'ㅉ': ['ㅈ','jj'] };
+  Object.keys(TENSE).forEach(function (k) {
+    var b = C[TENSE[k][0]];
+    C[k] = {
+      rom: TENSE[k][1],
+      r: b.r.map(function (s) { return 'ッ' + s; }),
+      y: b.y.map(function (s) { return 'ッ' + s; })
+    };
+  });
+
+  // f: 子音から読みを返す, rom: ローマ字
+  var V = {
+    'ㅏ': { rom: 'a',   f: function (c) { return c.r[0]; } },
+    'ㅣ': { rom: 'i',   f: function (c) { return c.r[1]; } },
+    'ㅜ': { rom: 'u',   f: function (c) { return c.r[2]; } },
+    'ㅡ': { rom: 'eu',  f: function (c) { return c.r[2]; } },
+    'ㅐ': { rom: 'ae',  f: function (c) { return c.r[3]; } },
+    'ㅔ': { rom: 'e',   f: function (c) { return c.r[3]; } },
+    'ㅗ': { rom: 'o',   f: function (c) { return c.r[4]; } },
+    'ㅓ': { rom: 'eo',  f: function (c) { return c.r[4]; } },
+    'ㅑ': { rom: 'ya',  f: function (c) { return c.y[0]; } },
+    'ㅠ': { rom: 'yu',  f: function (c) { return c.y[1]; } },
+    'ㅛ': { rom: 'yo',  f: function (c) { return c.y[2]; } },
+    'ㅕ': { rom: 'yeo', f: function (c) { return c.y[2]; } },
+    'ㅘ': { rom: 'wa',  f: function (c) { return c.w[0]; } },
+    'ㅝ': { rom: 'wo',  f: function (c) { return c.w[1]; } },
+    'ㅙ': { rom: 'wae', f: function (c) { return c.w[2]; } },
+    'ㅚ': { rom: 'oe',  f: function (c) { return c.w[2]; } },
+    'ㅞ': { rom: 'we',  f: function (c) { return c.w[2]; } },
+    'ㅟ': { rom: 'wi',  f: function (c) { return c.w[3]; } },
+    'ㅒ': { rom: 'yae', f: function (c) { return c.ye; } },
+    'ㅖ': { rom: 'ye',  f: function (c) { return c.ye; } },
+    'ㅢ': { rom: 'ui',  f: function (c) { return c.ui; } }
+  };
+
+  function syl(l, v) {
+    return String.fromCharCode(0xAC00 + (L_ORDER.indexOf(l) * 21 + V_ORDER.indexOf(v)) * 28);
+  }
+  function mk(l, v) {
+    return { ch: syl(l, v), kana: V[v].f(C[l]), rom: C[l].rom + V[v].rom, l: l, v: v };
+  }
+  function cross(ls, vs) {
+    var out = [];
+    ls.forEach(function (l) { vs.forEach(function (v) { out.push([l, v]); }); });
+    return out;
+  }
+
+  var BASIC6 = ['ㅏ','ㅓ','ㅗ','ㅜ','ㅡ','ㅣ'];
+  var Y4 = ['ㅑ','ㅕ','ㅛ','ㅠ'];
+  var BASIC10 = ['ㅏ','ㅑ','ㅓ','ㅕ','ㅗ','ㅛ','ㅜ','ㅠ','ㅡ','ㅣ'];
+  var PLAIN14 = ['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+  var LEVELS = {
+    beg: {
+      name: '初級', glyph: '가', desc: 'ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ と 6つの基本母音',
+      cells: cross(['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ'], BASIC6)
+    },
+    mid: {
+      name: '中級', glyph: '챠', desc: 'ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ と ㅑ ㅕ ㅛ ㅠ',
+      cells: cross(['ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'], BASIC6).concat(cross(PLAIN14, Y4))
+    },
+    adv: {
+      name: '上級', glyph: '쌰', desc: '濃音 ㄲ ㄸ ㅃ ㅆ ㅉ と 合成母音',
+      cells: cross(['ㄲ','ㄸ','ㅃ','ㅆ','ㅉ'], BASIC10)
+        .concat(cross(PLAIN14, ['ㅐ','ㅔ']))
+        .concat(cross(['ㄱ','ㅋ','ㅎ','ㅇ'], ['ㅘ','ㅝ','ㅙ','ㅚ','ㅞ','ㅟ']))
+        .concat(cross(['ㅇ'], ['ㅒ','ㅖ','ㅢ']))
+    },
+    gen: { name: '一般', cells: cross(PLAIN14, BASIC10) }
+  };
+
+  /* ---------- 音声 ---------- */
+  var koVoice = null, voiceChecked = false;
+  function pickVoice() {
+    try {
+      var vs = window.speechSynthesis.getVoices();
+      koVoice = null;
+      for (var i = 0; i < vs.length; i++) {
+        if (/^ko/i.test(vs[i].lang.replace('_', '-'))) { koVoice = vs[i]; break; }
+      }
+      voiceChecked = vs.length > 0;
+    } catch (e) {}
+  }
+  if ('speechSynthesis' in window) {
+    pickVoice();
+    try { window.speechSynthesis.onvoiceschanged = function () { pickVoice(); if (tab === 'quiz' && screen === 'home') render(); }; } catch (e) {}
+  }
+  function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ko-KR';
+      if (koVoice) u.voice = koVoice;
+      u.rate = 0.75;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function voiceNote() {
+    if (!('speechSynthesis' in window)) return '<div class="warn">この端末では音声再生に対応していません。</div>';
+    if (voiceChecked && !koVoice) return '<div class="warn">この端末で韓国語の音声が見つかりません。端末の設定で韓国語の音声データを追加してください。</div>';
+    return '';
+  }
+
+  /* ---------- 状態 ---------- */
+  var tab = 'quiz', screen = 'home';
+  var quiz = null; // { level, items, i, revealed, results[] }
+  var chartMode = 'gen', showKana = true, lastTapped = null;
+  var main = document.getElementById('main');
+
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function startQuiz(level) {
+    var pool = shuffle(LEVELS[level].cells).slice(0, 10);
+    quiz = { level: level, items: pool.map(function (p) { return mk(p[0], p[1]); }), i: 0, revealed: false, results: [] };
+    screen = 'q';
+    render();
+  }
+
+  /* ---------- 画面 ---------- */
+  function renderHome() {
+    var h = '<div><div class="title">カナダラクイズ</div><div class="sub">レベルを選ぶと10問出ます。</div></div>';
+    h += '<div class="levels">';
+    ['beg', 'mid', 'adv'].forEach(function (k) {
+      var lv = LEVELS[k];
+      h += '<button class="level" data-level="' + k + '"><span class="glyph">' + lv.glyph + '</span>' +
+        '<span class="name">' + lv.name + '</span><span class="go">はじめる ›</span>' +
+        '<span class="desc kr">' + lv.desc + '</span></button>';
+    });
+    h += '</div>';
+    h += '<div class="note">文字をタップすると、音声とカタカナの読み方が出ます。そのあと「読めた」「読めなかった」を選びます。</div>';
+    h += voiceNote();
+    main.innerHTML = h;
+    main.querySelectorAll('[data-level]').forEach(function (b) {
+      b.onclick = function () { startQuiz(b.getAttribute('data-level')); };
+    });
+  }
+
+  function renderQuestion() {
+    var q = quiz, it = q.items[q.i];
+    var h = '<div class="top"><span class="pill">' + (q.i + 1) + ' / 10</span><div class="dots" aria-hidden="true">';
+    for (var i = 0; i < 10; i++) {
+      var c = i < q.results.length ? (q.results[i] ? 'ok' : 'ng') : (i === q.i ? 'cur' : '');
+      h += '<i class="' + c + '"></i>';
+    }
+    h += '</div><button class="quit" id="quit">やめる</button></div>';
+    h += '<div class="card">';
+    if (!q.revealed) {
+      h += '<button class="big" id="glyph" aria-label="タップして答えを見る">' + it.ch + '</button>' +
+           '<div class="hint">文字をタップして答えを見る</div>';
+    } else {
+      h += '<div class="big">' + it.ch + '</div>' +
+           '<div class="answer"><div class="kana">' + it.kana + '</div><div class="rom">' + it.rom + '</div></div>' +
+           '<button class="replay" id="replay">♪ もう一度聞く</button>';
+    }
+    h += '</div>';
+    if (q.revealed) {
+      h += '<div class="judge"><button class="yes" id="yes">読めた</button><button class="no" id="no">読めなかった</button></div>';
+    }
+    main.innerHTML = h;
+    document.getElementById('quit').onclick = function () { speechCancel(); screen = 'home'; render(); };
+    if (!q.revealed) {
+      document.getElementById('glyph').onclick = function () { q.revealed = true; speak(it.ch); render(); };
+    } else {
+      document.getElementById('replay').onclick = function () { speak(it.ch); };
+      document.getElementById('yes').onclick = function () { answer(true); };
+      document.getElementById('no').onclick = function () { answer(false); };
+    }
+  }
+  function speechCancel() { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  function answer(ok) {
+    quiz.results.push(ok);
+    if (quiz.results.length >= 10) { screen = 'result'; }
+    else { quiz.i++; quiz.revealed = false; }
+    render();
+  }
+
+  function renderResult() {
+    var q = quiz, right = q.results.filter(Boolean).length, pct = Math.round(right * 100 / q.results.length);
+    var h = '<div class="card score"><div class="sub">' + LEVELS[q.level].name + 'の結果</div>' +
+      '<div class="pct">' + pct + '<small>%</small></div><div class="frac">' + right + ' / ' + q.results.length + ' 問 正解</div></div>';
+    var missed = q.items.filter(function (_, i) { return !q.results[i]; });
+    if (missed.length) {
+      h += '<div class="gap-title">読めなかった文字(タップで音声)</div><div class="missed">';
+      missed.forEach(function (m, i) {
+        h += '<button class="chip" data-m="' + i + '"><b>' + m.ch + '</b><span>' + m.kana + '</span></button>';
+      });
+      h += '</div>';
+    } else {
+      h += '<div class="note">全問正解です。</div>';
+    }
+    h += '<div class="row"><button class="btn" id="again">もう一度(' + LEVELS[q.level].name + ')</button>' +
+         '<button class="btn alt" id="home">レベルを選びなおす</button></div>';
+    main.innerHTML = h;
+    main.querySelectorAll('[data-m]').forEach(function (b) {
+      b.onclick = function () { speak(missed[+b.getAttribute('data-m')].ch); };
+    });
+    document.getElementById('again').onclick = function () { startQuiz(q.level); };
+    document.getElementById('home').onclick = function () { screen = 'home'; render(); };
+  }
+
+  function renderChart() {
+    var set = {};
+    LEVELS[chartMode].cells.forEach(function (p) { set[p[0] + p[1]] = true; });
+    var ls = L_ORDER.filter(function (l) { return LEVELS[chartMode].cells.some(function (p) { return p[0] === l; }); });
+    var vs = V_ORDER.slice().sort(function (a, b) { return 0; });
+    var std = ['ㅏ','ㅑ','ㅓ','ㅕ','ㅗ','ㅛ','ㅜ','ㅠ','ㅡ','ㅣ','ㅐ','ㅔ','ㅒ','ㅖ','ㅘ','ㅙ','ㅚ','ㅝ','ㅞ','ㅟ','ㅢ'];
+    vs = std.filter(function (v) { return LEVELS[chartMode].cells.some(function (p) { return p[1] === v; }); });
+
+    var h = '<div><div class="title">カナダラ表</div><div class="sub">文字をタップすると音声が流れます。</div></div>';
+    h += '<div class="seg" role="group" aria-label="表の種類">';
+    [['beg','初級'],['mid','中級'],['adv','上級'],['gen','一般']].forEach(function (m) {
+      h += '<button data-mode="' + m[0] + '" aria-pressed="' + (chartMode === m[0]) + '">' + m[1] + '</button>';
+    });
+    h += '</div>';
+    h += '<label class="switch"><input type="checkbox" id="kanaSw"' + (showKana ? ' checked' : '') + '>カタカナを表示する</label>';
+    h += '<div class="tablewrap' + (showKana ? '' : ' noKana') + '"><table><thead><tr><th></th>';
+    vs.forEach(function (v) { h += '<th>' + v + '</th>'; });
+    h += '</tr></thead><tbody>';
+    ls.forEach(function (l) {
+      h += '<tr><th>' + l + '</th>';
+      vs.forEach(function (v) {
+        if (set[l + v]) {
+          var it = mk(l, v);
+          h += '<td><button data-ch="' + it.ch + '" aria-label="' + it.ch + ' ' + it.kana + '"><span class="g">' + it.ch + '</span><span class="k">' + it.kana + '</span></button></td>';
+        } else {
+          h += '<td class="empty">·</td>';
+        }
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table></div>';
+    if (chartMode === 'gen') h += '<div class="note">基本の14子音 × 10母音の表です。濃音と合成母音は「上級」で確認できます。</div>';
+    if (chartMode === 'adv') h += '<div class="note">表が横に長いので、左右にスクロールしてください。</div>';
+    main.innerHTML = h;
+    main.querySelectorAll('[data-mode]').forEach(function (b) {
+      b.onclick = function () { chartMode = b.getAttribute('data-mode'); render(); };
+    });
+    document.getElementById('kanaSw').onchange = function (e) { showKana = e.target.checked; render(); };
+    main.querySelectorAll('[data-ch]').forEach(function (b) {
+      b.onclick = function () {
+        main.querySelectorAll('td button.on').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        speak(b.getAttribute('data-ch'));
+      };
+    });
+  }
+
+  function render() {
+    document.getElementById('tab-quiz').setAttribute('aria-selected', tab === 'quiz');
+    document.getElementById('tab-chart').setAttribute('aria-selected', tab === 'chart');
+    if (tab === 'chart') return renderChart();
+    if (screen === 'home') return renderHome();
+    if (screen === 'q') return renderQuestion();
+    return renderResult();
+  }
+  document.getElementById('tab-quiz').onclick = function () { tab = 'quiz'; render(); window.scrollTo(0, 0); };
+  document.getElementById('tab-chart').onclick = function () { tab = 'chart'; render(); window.scrollTo(0, 0); };
+  render();
+})();
+</script>
+
+</body>
+</html>
